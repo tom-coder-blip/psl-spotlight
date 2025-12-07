@@ -1,5 +1,6 @@
 const Comment = require('../models/Comment');
 const Post = require('../models/Post');
+const trendingService = require('../services/trendingService');
 
 // Create a new comment
 exports.createComment = async (req, res) => {
@@ -21,6 +22,9 @@ exports.createComment = async (req, res) => {
     // Push comment reference into Post.comments
     post.comments.push(comment._id);
     await post.save();
+
+     // Update trending rating for the player linked to this post
+    await trendingService.addCommentImpact(post.player);
 
     res.status(201).json(comment);
   } catch (error) {
@@ -57,9 +61,14 @@ exports.deleteComment = async (req, res) => {
     await comment.deleteOne();
 
     // Remove from Post.comments array
-    await Post.findByIdAndUpdate(comment.post, {
+    const post = await Post.findByIdAndUpdate(comment.post, {
       $pull: { comments: comment._id },
     });
+
+     // Decrement trending rating for the player linked to this post
+    if (post) {
+      await trendingService.removeCommentImpact(post.player);
+    }
 
     res.json({ message: 'Comment deleted successfully' });
   } catch (error) {

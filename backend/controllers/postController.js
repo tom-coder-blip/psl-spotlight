@@ -1,12 +1,14 @@
 const Post = require('../models/Post');
+const trendingService = require('../services/trendingService');
 
 // Create a new post
 exports.createPost = async (req, res) => {
   try {
-    const { playerName, club, matchweek, title, content, tags } = req.body;
+    const { player, playerName, club, matchweek, title, content, tags } = req.body;
 
     const post = new Post({
       user: req.user.id, // from JWT middleware
+      player,
       playerName,
       club,
       matchweek,
@@ -17,6 +19,7 @@ exports.createPost = async (req, res) => {
     });
 
     await post.save();
+    await trendingService.addPostImpact(player);
     res.status(201).json(post);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -102,6 +105,7 @@ exports.deletePost = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized' });
     }
 
+    await trendingService.removePostImpact(post.player);
     await post.deleteOne();
     res.json({ message: 'Post deleted successfully' });
   } catch (error) {

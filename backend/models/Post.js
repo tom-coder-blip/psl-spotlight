@@ -7,6 +7,11 @@ const postSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
+    player: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Player',
+      required: true,
+    },
     playerName: {
       type: String,
       required: true,

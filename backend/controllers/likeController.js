@@ -1,5 +1,6 @@
 const Like = require('../models/Like');
 const Post = require('../models/Post');
+const trendingService = require('../services/trendingService');
 
 // Like a post
 exports.likePost = async (req, res) => {
@@ -14,7 +15,12 @@ exports.likePost = async (req, res) => {
     await like.save();
 
     // Add user to Post.likes array
-    await Post.findByIdAndUpdate(postId, { $addToSet: { likes: req.user.id } });
+    const post = await Post.findByIdAndUpdate(postId, { $addToSet: { likes: req.user.id } });
+
+     // Update trending rating for the player linked to this post
+    if (post) {
+      await trendingService.addLikeImpact(post.player);
+    }
 
     res.status(201).json({ message: 'Post liked', like });
   } catch (error) {
@@ -30,8 +36,13 @@ exports.unlikePost = async (req, res) => {
     const like = await Like.findOneAndDelete({ post: postId, user: req.user.id });
     if (!like) return res.status(404).json({ message: 'Like not found' });
 
-    // Remove user from Post.likes array
-    await Post.findByIdAndUpdate(postId, { $pull: { likes: req.user.id } });
+     // Remove user from Post.likes array
+    const post = await Post.findByIdAndUpdate(postId, { $pull: { likes: req.user.id } });
+
+    // Decrement trending rating for the player linked to this post
+    if (post) {
+      await trendingService.removeLikeImpact(post.player);
+    }
 
     res.json({ message: 'Post unliked' });
   } catch (error) {
